@@ -5,6 +5,7 @@ from struct import unpack
 import idaapi
 import idautils
 import idc
+import ida_dbg
 import base64
 
 from PyQt5 import QtCore
@@ -21,6 +22,7 @@ ACTION_FILLNOP = "lazyida:fillnop"
 ACTION_PASTE = "lazyida:paste"
 ACTION_DUMPER = "lazyida:dumper"
 ACTION_JMP = "lazyida:jmper"
+ACTION_COPY_RVA = "lazyida:copy_rva"
 
 ACTION_HX_REMOVERETTYPE = "lazyida:hx_removerettype"
 ACTION_HX_COPYEA = "lazyida:hx_copyea"
@@ -465,6 +467,17 @@ class menu_action_handler_t(idaapi.action_handler_t):
         elif self.action == ACTION_JMP:
             print("jmper")
             jmper_windows()
+        elif self.action == ACTION_COPY_RVA:
+            ea = idaapi.get_screen_ea()
+            if not ida_dbg.is_debugger_on():
+                rva = ea - idaapi.get_imagebase()
+            else:
+                for mod in idautils.Modules():
+                    if mod.base  <= ea < mod.base + mod.size:
+                        rva = ea - mod.base
+                        break
+            print("[+] RVA of 0x%X is 0x%X" % (ea, rva))
+            copy_to_clip("0x%X" % rva)
         else:
             return 0
 
@@ -645,6 +658,7 @@ class UI_Hook(idaapi.UI_Hooks):
             idaapi.attach_action_to_popup(form, popup, ACTION_PASTE, None)
             idaapi.attach_action_to_popup(form, popup, ACTION_DUMPER, None)
             idaapi.attach_action_to_popup(form, popup, ACTION_JMP, None)
+            idaapi.attach_action_to_popup(form, popup, ACTION_COPY_RVA, None)
             t0, t1, view = idaapi.twinpos_t(), idaapi.twinpos_t(), idaapi.get_current_viewer()
             if idaapi.read_selection(view, t0, t1) or idc.get_item_size(idc.get_screen_ea()) > 1:
                 idaapi.attach_action_to_popup(form, popup, ACTION_XORDATA, None)
@@ -744,6 +758,7 @@ class LazyIDA_t(idaapi.plugin_t):
                                  9),
             idaapi.action_desc_t(ACTION_SCANVUL, "Scan format string vulnerabilities",
                                  menu_action_handler_t(ACTION_SCANVUL), None, None, 160),
+            idaapi.action_desc_t(ACTION_COPY_RVA, "Copy RVA", menu_action_handler_t(ACTION_COPY_RVA), None, None, 9),
         )
         for action in menu_actions:
             idaapi.register_action(action)
