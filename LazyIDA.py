@@ -3,6 +3,7 @@ from __future__ import print_function
 import binascii
 from struct import unpack
 import idaapi
+import ida_ida
 import idautils
 import idc
 import ida_dbg
@@ -315,7 +316,7 @@ class hotkey_action_handler_t(idaapi.action_handler_t):
         return 1
 
     def update(self, ctx):
-        if ctx.form_type in (idaapi.BWN_DISASM, idaapi.BWN_DUMP):
+        if ctx.widget_type in (idaapi.BWN_DISASM, idaapi.BWN_DUMP):
             return idaapi.AST_ENABLE_FOR_WIDGET
         else:
             return idaapi.AST_DISABLE_FOR_WIDGET
@@ -716,10 +717,9 @@ class LazyIDA_t(idaapi.plugin_t):
         global ARCH
         global BITS
         ARCH = idaapi.ph_get_id()
-        info = idaapi.get_inf_structure()
-        if info.is_64bit():
+        if ida_ida.inf_is_64bit():
             BITS = 64
-        elif info.is_32bit():
+        elif ida_ida.inf_is_32bit_exactly():
             BITS = 32
         else:
             BITS = 16
